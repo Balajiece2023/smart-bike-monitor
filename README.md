@@ -10,15 +10,36 @@
 
 ---
 
-## 📱 App & UI Previews
+## 📱 Mobile App UI Gallery
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Live Bike Dashboard" width="31%" style="border-radius: 12px; margin-right: 10px;" />
-  <img src="docs/screenshots/accident_alert.png" alt="Accident Detection & Emergency Dispatch" width="31%" style="border-radius: 12px; margin-right: 10px;" />
+  <img src="docs/screenshots/splash_screen.jpeg" alt="Splash Screen" width="23%" style="border-radius: 12px; margin: 4px;" />
+  <img src="docs/screenshots/dashboard_live.jpeg" alt="Live Telemetry Dashboard" width="23%" style="border-radius: 12px; margin: 4px;" />
+  <img src="docs/screenshots/bluetooth_devices.jpeg" alt="Hardware BLE Scanner" width="23%" style="border-radius: 12px; margin: 4px;" />
+  <img src="docs/screenshots/accident_alert.png" alt="Accident Emergency Alert" width="23%" style="border-radius: 12px; margin: 4px;" />
+</p>
+<p align="center">
+  <i>Splash Screen &nbsp;•&nbsp; Live Telemetry Dashboard &nbsp;•&nbsp; Hardware BLE Scanner &nbsp;•&nbsp; Accident Alert HUD</i>
 </p>
 
-> **Left:** Real-time speed gauge, lock status, battery SoC, and BLE telemetry dashboard.  
-> **Right:** Instant accident detection alert HUD showing real-time GPS location, nearest hospitals, and automated ambulance dispatch.
+<p align="center">
+  <img src="docs/screenshots/geofencing_map.jpeg" alt="Admin Geofencing & Map" width="23%" style="border-radius: 12px; margin: 4px;" />
+  <img src="docs/screenshots/user_management.jpeg" alt="Driver Management & Signals" width="23%" style="border-radius: 12px; margin: 4px;" />
+  <img src="docs/screenshots/register_rider.jpeg" alt="Rider Registration & License" width="23%" style="border-radius: 12px; margin: 4px;" />
+  <img src="docs/screenshots/app_settings.jpeg" alt="Settings & Reset" width="23%" style="border-radius: 12px; margin: 4px;" />
+</p>
+<p align="center">
+  <i>Geofencing & Map &nbsp;•&nbsp; User Management & Signals &nbsp;•&nbsp; Rider Registration & License &nbsp;•&nbsp; App Settings & Reset</i>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/side_navigation.jpeg" alt="Navigation Drawer" width="23%" style="border-radius: 12px; margin: 4px;" />
+  <img src="docs/screenshots/usage_history.jpeg" alt="Usage & Route History" width="23%" style="border-radius: 12px; margin: 4px;" />
+  <img src="docs/screenshots/bike_renewal.jpeg" alt="Bike Details & Insurance Renewal" width="23%" style="border-radius: 12px; margin: 4px;" />
+</p>
+<p align="center">
+  <i>Navigation Menu &nbsp;•&nbsp; Route & Usage History &nbsp;•&nbsp; Insurance & Service Schedule</i>
+</p>
 
 ---
 
