@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Bike Simulator & BLE Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 960px;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 24px;
+    }
+
+    /* Mobile Device Frame */
+    .mobile-frame {
+      background: #0f172a;
+      border: 3px solid #334155;
+      border-radius: 40px;
+      padding: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    .connection-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .gauge-card {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 24px;
+      text-align: center;
+    }
+    .gauge-label {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .speed-display {
+      font-size: 64px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      margin: 12px 0 6px 0;
+      text-shadow: 0 0 25px var(--accent-glow);
+    }
+    .speed-unit {
+      font-size: 16px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .sub-stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 16px;
+      border-top: 1px solid #334155;
+      padding-top: 12px;
+    }
+    .sub-stat-val { font-size: 15px; font-weight: 700; color: #fff; }
+    .sub-stat-lbl { font-size: 11px; color: var(--text-muted); }
+
+    /* Lock Tile Button */
+    .lock-btn {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      border-radius: 20px;
+      border: 2px solid;
+      background: #1e293b;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      color: #fff;
+    }
+    .lock-btn.locked {
+      border-color: #475569;
+    }
+    .lock-btn.unlocked {
+      background: #064e3b;
+      border-color: var(--success);
+    }
+    .lock-icon-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .locked .lock-icon-circle { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .unlocked .lock-icon-circle { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+
+    .grid-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .metric-box {
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px;
+    }
+    .metric-title { font-size: 11px; color: var(--text-muted); font-weight: 700; margin-bottom: 6px; }
+    .metric-value { font-size: 20px; font-weight: 700; }
+    .metric-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Inspector & Simulator Side Panel */
+    .inspector-panel {
+      background: #111827;
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .log-box {
+      background: #030712;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 12px;
+      height: 320px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .log-entry {
+      word-break: break-all;
+      line-height: 1.4;
+    }
+    .log-rx { color: #34d399; }
+    .log-tx { color: #f472b6; }
+
+    .controls-row {
+      display: flex;
+      gap: 10px;
+    }
+    button.action-btn {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button.action-btn:hover { background: #1d4ed8; }
+    button.action-btn.secondary { background: #374151; }
+    button.action-btn.secondary:hover { background: #4b5563; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Interactive Mobile Simulator UI -->
+  <div class="mobile-frame">
+    <div class="status-bar">
+      <span>SMART CYBER-BIKE</span>
+      <div id="connBadge" class="connection-badge">
+        <span class="badge-dot"></span>
+        <span id="connStatusText">CONNECTED</span>
+      </div>
+    </div>
+
+    <!-- Speedometer -->
+    <div class="gauge-card">
+      <div class="gauge-label">LIVE SPEED</div>
+      <div id="speedVal" class="speed-display">0.0</div>
+      <div class="speed-unit">km/h</div>
+      <div class="sub-stats">
+        <div>
+          <div class="sub-stat-lbl">CADENCE</div>
+          <div id="cadenceVal" class="sub-stat-val">0 RPM</div>
+        </div>
+        <div>
+          <div class="sub-stat-lbl">TRIP DISTANCE</div>
+          <div id="tripVal" class="sub-stat-val">14.25 km</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Motorized Lock Actuator Button -->
+    <div id="lockBtn" class="lock-btn locked" onclick="toggleLock()">
+      <div class="lock-icon-circle" id="lockIcon">🔒</div>
+      <div>
+        <div style="font-weight:700; font-size:15px;" id="lockTitle">BIKE IS LOCKED</div>
+        <div style="font-size:12px; color:var(--text-muted);" id="lockSub">Click to send BLE unlock command (0x10)</div>
+      </div>
+    </div>
+
+    <!-- Sensor Metrics Grid -->
+    <div class="grid-metrics">
+      <div class="metric-box">
+        <div class="metric-title">BATTERY SOC</div>
+        <div class="metric-value" id="socVal" style="color:#fbbf24;">94%</div>
+        <div class="metric-sub" id="mvVal">4,120 mV</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-title">TEMPERATURE</div>
+        <div class="metric-value" id="tempVal" style="color:#f97316;">26.8°C</div>
+        <div class="metric-sub">Motor Controller</div>
+      </div>
+    </div>
+
+    <!-- GPS & Security Hub -->
+    <div class="metric-box">
+      <div class="metric-title">GPS TELEMETRY & HARDWARE</div>
+      <div style="font-family:'JetBrains Mono'; font-size:12px; color:var(--text-muted); margin-bottom:8px;">
+        Lat: 37.774929, Lng: -122.419416 (Fix: 3D, Sats: 9)
+      </div>
+      <div class="controls-row">
+        <button class="action-btn" style="background:#0284c7;" onclick="enrollFingerprint()">Scan Fingerprint</button>
+        <button class="action-btn secondary" onclick="triggerAlarm()">Alarm Siren</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hardware Protocol Inspector & Bus Trace -->
+  <div class="inspector-panel">
+    <div>
+      <h3 style="font-size: 16px; margin-bottom: 4px;">BLE Bus & Packet Frame Inspector</h3>
+      <p style="font-size: 12px; color: var(--text-muted);">
+        Real-time binary frames conforming to <code style="color:var(--accent);">BLE_PROTOCOL_SPEC.md</code>
+      </p>
+    </div>
+
+    <div class="controls-row">
+      <button class="action-btn secondary" onclick="toggleConnection()" id="connectToggleBtn">Disconnect BLE</button>
+      <button class="action-btn secondary" onclick="clearLogs()">Clear Bus Trace</button>
+    </div>
+
+    <div class="log-box" id="logBox">
+      <!-- Packet frames logged here -->
+    </div>
+  </div>
+</div>
+
+<script>
+  let isConnected = true;
+  let isLocked = true;
+  let speed = 0.0;
+  let cadence = 0;
+  let batteryMv = 4120;
+  let soc = 94;
+  let seq = 0;
+
+  function crc16Ccitt(byteArray) {
+    let crc = 0xFFFF;
+    for (let byte of byteArray) {
+      crc ^= (byte & 0xFF) << 8;
+      for (let i = 0; i < 8; i++) {
+        if ((crc & 0x8000) !== 0) {
+          crc = ((crc << 1) ^ 0x1021) & 0xFFFF;
+        } else {
+          crc = (crc << 1) & 0xFFFF;
+        }
+      }
+    }
+    return crc;
+  }
+
+  function formatHex(val, pad = 2) {
+    return val.toString(16).toUpperCase().padStart(pad, '0');
+  }
+
+  function logPacket(direction, cmdName, bytes) {
+    const logBox = document.getElementById("logBox");
+    const hex = Array.from(bytes).map(b => formatHex(b)).join(" ");
+    const el = document.createElement("div");
+    el.className = `log-entry ${direction === 'RX' ? 'log-rx' : 'log-tx'}`;
+    el.innerText = `[${new Date().toLocaleTimeString()}] ${direction} [${cmdName}]: ${hex}`;
+    logBox.appendChild(el);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function sendPacket(cmdId, cmdName, payload) {
+    if (!isConnected) return;
+    const len = payload.length;
+    const body = [seq++ & 0xFF, cmdId, (len >> 8) & 0xFF, len & 0xFF, ...payload];
+    const crc = crc16Ccitt(body);
+    const frame = [0xAA, 0x55, ...body, (crc >> 8) & 0xFF, crc & 0xFF];
+    logPacket("TX", cmdName, frame);
+    return frame;
+  }
+
+  function receivePacket(cmdId, cmdName, payload) {
+    if (!isConnected) return;
+    const len = payload.length;
+    const body = [seq++ & 0xFF, cmdId, (len >> 8) & 0xFF, len & 0xFF, ...payload];
+    const crc = crc16Ccitt(body);
+    const frame = [0xAA, 0x55, ...body, (crc >> 8) & 0xFF, crc & 0xFF];
+    logPacket("RX", cmdName, frame);
+  }
+
+  function toggleLock() {
+    if (!isConnected) return;
+    const nextLocked = !isLocked;
+    sendPacket(0x10, "CMD_LOCK_CONTROL", [nextLocked ? 0x01 : 0x00]);
+
+    setTimeout(() => {
+      isLocked = nextLocked;
+      updateLockUI();
+      receivePacket(0x80, "RSP_ACK", [isLocked ? 0x01 : 0x00, 0x00]);
+    }, 250);
+  }
+
+  function updateLockUI() {
+    const lockBtn = document.getElementById("lockBtn");
+    const lockIcon = document.getElementById("lockIcon");
+    const lockTitle = document.getElementById("lockTitle");
+    const lockSub = document.getElementById("lockSub");
+
+    if (isLocked) {
+      lockBtn.className = "lock-btn locked";
+      lockIcon.innerText = "🔒";
+      lockTitle.innerText = "BIKE IS LOCKED";
+      lockSub.innerText = "Click to send BLE unlock command (0x10)";
+    } else {
+      lockBtn.className = "lock-btn unlocked";
+      lockIcon.innerText = "🔓";
+      lockTitle.innerText = "BIKE IS UNLOCKED";
+      lockSub.innerText = "Click to send BLE lock command (0x10)";
+    }
+  }
+
+  function enrollFingerprint() {
+    sendPacket(0x20, "CMD_FINGERPRINT_ENROLL", [0x01]);
+    setTimeout(() => {
+      receivePacket(0x92, "NOTIF_FINGERPRINT_OK", [0x01, 0x01, 95]);
+      alert("ESP32 Fingerprint Sensor: Finger scanned successfully (Slot ID 1, Confidence: 95%)");
+    }, 500);
+  }
+
+  function triggerAlarm() {
+    sendPacket(0x11, "CMD_ALARM_CONTROL", [0x01]);
+    setTimeout(() => {
+      receivePacket(0x93, "NOTIF_ALARM_TRIGGERED", [0x01]);
+      alert("🚨 Siren Triggered on Bike Controller!");
+    }, 300);
+  }
+
+  function toggleConnection() {
+    isConnected = !isConnected;
+    const badge = document.getElementById("connBadge");
+    const text = document.getElementById("connStatusText");
+    const btn = document.getElementById("connectToggleBtn");
+
+    if (isConnected) {
+      badge.style.color = "var(--success)";
+      badge.style.background = "rgba(16, 185, 129, 0.15)";
+      text.innerText = "CONNECTED";
+      btn.innerText = "Disconnect BLE";
+    } else {
+      badge.style.color = "var(--danger)";
+      badge.style.background = "rgba(239, 68, 68, 0.15)";
+      text.innerText = "DISCONNECTED";
+      btn.innerText = "Connect BLE";
+    }
+  }
+
+  function clearLogs() {
+    document.getElementById("logBox").innerHTML = "";
+  }
+
+  // Periodic Telemetry Loop
+  setInterval(() => {
+    if (!isConnected) return;
+
+    if (!isLocked) {
+      speed = (speed + 1.2) % 34.0;
+      cadence = 75;
+    } else {
+      speed = 0.0;
+      cadence = 0;
+    }
+
+    document.getElementById("speedVal").innerText = speed.toFixed(1);
+    document.getElementById("cadenceVal").innerText = `${cadence} RPM`;
+
+    // 16-byte raw telemetry payload
+    const telem = [
+      isLocked ? 1 : 0,
+      (batteryMv >> 8) & 0xFF, batteryMv & 0xFF,
+      soc,
+      (Math.round(speed * 10) >> 8) & 0xFF, Math.round(speed * 10) & 0xFF,
+      (cadence >> 8) & 0xFF, cadence & 0xFF,
+      0x01, 0x0C,
+      1,
+      isLocked ? 1 : 0,
+      0x00, 0x00, 0x37, 0xAA
+    ];
+
+    receivePacket(0x90, "NOTIF_TELEMETRY", telem);
+  }, 1500);
+
+  // Initial greeting
+  receivePacket(0x80, "RSP_READY", [0x01, 0x00]);
+</script>
+</body>
+</html>
