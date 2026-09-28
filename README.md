@@ -1,8 +1,24 @@
 # Smart Bike Monitor 🚴‍♂️⚡
 
-A state-of-the-art Flutter & ESP32 IoT application for intelligent two-wheeler monitoring, real-time safety telemetry, automated accident response, BLE hardware control, dynamic geofencing, and multi-user driver authorization.
+<p align="center">
+  <img src="assets/images/app_logo.png" alt="Smart Bike Monitor Logo" width="120" style="border-radius: 24px;" />
+</p>
 
-Designed for all formats of bikes (EVs, ICE motorcycles, and smart commuter cycles).
+<p align="center">
+  <b>Intelligent Two-Wheeler Safety, BLE Telemetry & Automated Accident Emergency Dispatch</b>
+</p>
+
+---
+
+## 📱 App & UI Previews
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Live Bike Dashboard" width="31%" style="border-radius: 12px; margin-right: 10px;" />
+  <img src="docs/screenshots/accident_alert.png" alt="Accident Detection & Emergency Dispatch" width="31%" style="border-radius: 12px; margin-right: 10px;" />
+</p>
+
+> **Left:** Real-time speed gauge, lock status, battery SoC, and BLE telemetry dashboard.  
+> **Right:** Instant accident detection alert HUD showing real-time GPS location, nearest hospitals, and automated ambulance dispatch.
 
 ---
 
