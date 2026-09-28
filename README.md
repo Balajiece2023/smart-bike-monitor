@@ -1,56 +1,170 @@
-# Smart Bike BLE Architecture & System Overview
+# Smart Bike Monitor 🚴‍♂️⚡
 
-This project implements the complete bidirectional communication pipeline requested:
-```
-Flutter UI
-    ↓
-Riverpod State
-    ↓
-Bike Controller
-    ↓
-Bike Repository
-    ↓
-BLE Service
-    ↓
-BLE Protocol
-    ↓
-ESP32 / Bike Controller
-    ↓
-Sensors + Lock + GPS + Fingerprint
+A state-of-the-art Flutter & ESP32 IoT application for intelligent two-wheeler monitoring, real-time safety telemetry, automated accident response, BLE hardware control, dynamic geofencing, and multi-user driver authorization.
+
+Designed for all formats of bikes (EVs, ICE motorcycles, and smart commuter cycles).
+
+---
+
+## 🌟 Key Highlights & Features
+
+### 1. 🛡️ Real-Time Accident Detection & Emergency Dispatch
+- **Hardware Trigger Integration**: Instantaneous detection via BLE command `'1'` from ESP32 crash sensor or accelerometer thresholds.
+- **Dynamic GPS Location Fetch**: Real-time vehicle coordinates captured directly from telemetry and GPS geofence tracking.
+- **Automated Emergency Routing**:
+  - Dynamically calculates distance to real nearby hospitals based on current coordinates (e.g. Puducherry JIPMER, General Hospital, Indira Gandhi Institute, etc.).
+  - Simulates instantaneous emergency calls and ambulance dispatch broadcast.
+  - Custom audible emergency siren sound (`alert.wav`) and prominent HUD emergency modal.
+
+### 2. 📡 Real Hardware BLE & In-App Simulator
+- **Android Native Bluetooth MethodChannel**:
+  - Automatically verifies Android BLE runtime permissions (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`).
+  - Prompts to turn on Bluetooth if disabled on the smartphone before initiating scans.
+  - Discovers physical Bluetooth Low Energy devices and displays paired devices cleanly.
+- **Full Bidirectional BLE Protocol Framing**:
+  - 8-byte framed packets: `[SOF1(0xAA), SOF2(0x55), Seq, CmdID, Len(2), Payload(N), CRC16(2)]`.
+  - CRC-16-CCITT packet verification and automatic chunk assembly.
+- **Dedicated Simulator & Serial Log View**:
+  - Built-in simulation mode with mock hardware peripherals for development without physical bike hardware.
+  - Real-time **RX & TX Communication Log Console** displaying sent and received packet frames.
+
+### 3. 🌐 Admin Geofencing & Vehicle Tracking
+- Visual circular perimeter map with interactive radius adjustment (100m to 5000m).
+- Speed governor limits and max speed alarms.
+- Instant restriction toggles:
+  - Motor Kill Switch
+  - Anti-Theft Alarm Siren
+  - Ignition Lock & Immobilizer
+- Debounced persistence: Prevents duplicate notification spam while adjusting settings.
+
+### 4. 👥 Driver Management & Licensing
+- User profiles with Name, Phone, Role, and **Driving License Number**.
+- Clean CRUD management with persistent state.
+
+### 5. ⚙️ Settings & System Reset
+- Persistent app preferences stored across sessions.
+- In-menu **App Settings** with a complete Factory Reset option to restore default telemetry and geofence parameters.
+
+---
+
+## 🏛️ System Architecture
+
+```text
+               ┌───────────────────────────────────────┐
+               │         Flutter UI (Material 3)       │
+               │   Dashboard | Geofencing | Users      │
+               └───────────────────┬───────────────────┘
+                                   │
+                                   ▼
+               ┌───────────────────────────────────────┐
+               │    Riverpod Controller & State        │
+               │         (BikeController)              │
+               └───────────────────┬───────────────────┘
+                                   │
+                                   ▼
+               ┌───────────────────────────────────────┐
+               │            Bike Repository            │
+               │        (BikeRepositoryImpl)           │
+               └───────────────────┬───────────────────┘
+                                   │
+                                   ▼
+               ┌───────────────────────────────────────┐
+               │       BLE Service & Native Bridge     │
+               │ (ReactiveBleService / MethodChannel)  │
+               └───────────────────┬───────────────────┘
+                                   │
+                                   ▼
+               ┌───────────────────────────────────────┐
+               │       BLE Binary Protocol Parser      │
+               │     (Framing, CRC16, MTU Chunking)    │
+               └───────────────────┬───────────────────┘
+                                   │
+                                   ▼
+               ┌───────────────────────────────────────┐
+               │         ESP32 Firmware (GATT)         │
+               │   Sensors + Lock + GPS + Crash Sensor │
+               └───────────────────────────────────────┘
 ```
 
 ---
 
-## 1. Architecture Components
+## 📂 Project Structure
 
-### A. Flutter UI Layer
-- **[BikeDashboardScreen](file:///e:/CProj_01/lib/ui/features/bike/views/bike_dashboard_screen.dart)**:
-  - High-contrast cyber-styled dark mode dashboard.
-  - Live speed gauge & trip metrics.
-  - One-tap motorized lock/unlock toggle with active progress feedback.
-  - Dynamic battery voltage & SoC percentage, motor temperature.
-  - GPS satellite fix status (lat/long, precision HDOP).
-  - Fingerprint enrollment trigger and alarm siren activation.
+```
+├── android/                   # Native Android wrapper with Bluetooth MethodChannel
+├── assets/
+│   ├── audio/alert.wav        # Accident alarm audio sound
+│   └── images/app_logo.png    # Smart Bike Monitor official logo
+├── firmware/
+│   └── esp32_smart_bike.ino   # ESP32 BLE GATT Server & Sensor Firmware
+├── lib/
+│   ├── data/
+│   │   ├── repositories/      # BikeRepositoryImpl & domain mapping
+│   │   └── services/          # BLE framing, CRC-16 protocol, ReactiveBle
+│   ├── domain/
+│   │   └── models/            # BikeTelemetry, GpsData, User, GeofenceConfig
+│   ├── theme/                 # Modern cyber-dark UI theme tokens
+│   ├── ui/features/bike/
+│   │   ├── view_models/       # BikeController (StateNotifier)
+│   │   └── views/             # Dashboard, Geofencing, Pairing, Users, Settings
+│   └── main.dart              # Application entry point
+├── test/                      # Unit & integration test suites
+├── BLE_PROTOCOL_SPEC.md       # Detailed byte-level binary framing specification
+└── simulator.html             # Standalone web test bench for hardware communication
+```
 
-### B. Riverpod State & Controller Layer
-- **[BikeController & BikeState](file:///e:/CProj_01/lib/ui/features/bike/view_models/bike_controller.dart)**:
-  - Manages immutable state for telemetry, connection, lock, and security events.
-  - Handles optimistic UI updates and dispatching asynchronous operations.
+---
 
-### C. Data & Repository Layer
-- **[BikeRepository & BikeRepositoryImpl](file:///e:/CProj_01/lib/data/repositories/bike_repository_impl.dart)**:
-  - Converts low-level byte buffers into clean domain entities: [BikeTelemetry, GpsData, FingerprintEvent](file:///e:/CProj_01/lib/domain/models/bike_models.dart).
+## 🚀 Getting Started
 
-### D. BLE Service & Protocol Framing Layer
-- **[BleService](file:///e:/CProj_01/lib/data/services/ble_service.dart)**:
-  - Interface supporting both [ReactiveBleService](file:///e:/CProj_01/lib/data/services/reactive_ble_service.dart) (physical Bluetooth) and [MockBleService](file:///e:/CProj_01/lib/data/services/ble_service.dart) (live simulation mode).
-- **[BleProtocol](file:///e:/CProj_01/lib/data/services/ble_protocol.dart)** & **[BLE_PROTOCOL_SPEC.md](file:///e:/CProj_01/BLE_PROTOCOL_SPEC.md)**:
-  - 8-byte framing: `[SOF1(0xAA), SOF2(0x55), Seq, CmdID, Len(2), Payload(N), CRC16(2)]`.
-  - Stream state machine to assemble fragmented BLE MTU chunks.
-  - CRC-16-CCITT packet verification.
+### Prerequisites
+- [Flutter SDK](https://flutter.dev) (>=3.0.0)
+- Android Studio / VS Code with Flutter extension
+- Android Device with Bluetooth 4.2+ (BLE) or Android Emulator
 
-### E. ESP32 Firmware
-- **[esp32_smart_bike.ino](file:///e:/CProj_01/firmware/esp32_smart_bike.ino)**:
-  - Dual GATT characteristic server (TX notify, RX write).
-  - Actuator control for lock H-bridge and alarm buzzer.
-  - Periodic telemetry broadcast loop.
+### Installation & Run
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/Balajiece2023/smart-bike-monitor.git
+   cd smart-bike-monitor
+   ```
+
+2. **Install Flutter dependencies**:
+   ```bash
+   flutter pub get
+   ```
+
+3. **Run unit tests**:
+   ```bash
+   flutter test
+   ```
+
+4. **Launch on connected Android device**:
+   ```bash
+   flutter run -d <device_id>
+   ```
+
+---
+
+## 📡 BLE Protocol Overview
+
+Frames sent between the ESP32 and Flutter app conform to the following 8-byte framing structure:
+
+| Field | Size | Description |
+|---|---|---|
+| `SOF1` | 1 Byte | Start of Frame 1 (`0xAA`) |
+| `SOF2` | 1 Byte | Start of Frame 2 (`0x55`) |
+| `Seq` | 1 Byte | Rolling sequence counter (`0x00`-`0xFF`) |
+| `CmdID` | 1 Byte | Command identifier (e.g. Telemetry, Lock, Alarm) |
+| `Length` | 2 Bytes | Big-Endian payload length `N` |
+| `Payload` | `N` Bytes | Serialized payload bytes |
+| `CRC16` | 2 Bytes | CRC-16-CCITT checksum over `[Seq .. Payload]` |
+
+Refer to [BLE_PROTOCOL_SPEC.md](BLE_PROTOCOL_SPEC.md) for complete opcode tables and payload schemas.
+
+---
+
+## 🛡️ License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
