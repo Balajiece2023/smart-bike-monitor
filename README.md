@@ -16,7 +16,6 @@
   <img src="docs/screenshots/splash_screen.jpeg" alt="Splash Screen" width="23%" style="border-radius: 12px; margin: 4px;" />
   <img src="docs/screenshots/dashboard_live.jpeg" alt="Live Telemetry Dashboard" width="23%" style="border-radius: 12px; margin: 4px;" />
   <img src="docs/screenshots/bluetooth_devices.jpeg" alt="Hardware BLE Scanner" width="23%" style="border-radius: 12px; margin: 4px;" />
-  <img src="docs/screenshots/accident_alert.png" alt="Accident Emergency Alert" width="23%" style="border-radius: 12px; margin: 4px;" />
 </p>
 <p align="center">
   <i>Splash Screen &nbsp;•&nbsp; Live Telemetry Dashboard &nbsp;•&nbsp; Hardware BLE Scanner &nbsp;•&nbsp; Accident Alert HUD</i>
