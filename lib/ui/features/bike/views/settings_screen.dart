@@ -72,6 +72,8 @@ class SettingsScreen extends ConsumerWidget {
                 const SizedBox(height: 10),
                 _buildInfoRow('Target Format', 'All Bike Formats (EV, Petrol, Hybrid)'),
                 const SizedBox(height: 10),
+                _buildInfoRow('Bluetooth Standards', 'HC-05 v2.0 SPP & BLE 4.0/5.0 GATT'),
+                const SizedBox(height: 10),
                 _buildInfoRow('Active Users Registered', '${state.users.length} Riders'),
                 const SizedBox(height: 10),
                 _buildInfoRow('Current Active Slot', 'Slot ${state.activeUserSlot.toUpperCase()} (${state.activeUser?.name ?? "None"})'),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../theme/app_theme.dart';
+import 'bike_renewal_screen.dart';
 
 class SecondaryViews {
   /// Track History View
@@ -257,108 +258,7 @@ class SecondaryViews {
 
   /// Bike Details / Insurance & Service Renewal View
   static Widget buildBikeRenewalDetailsScreen({required VoidCallback onBack}) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: onBack,
-        ),
-        title: const Text(
-          "Bike Details & Renewal",
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "SCHEDULE & DOCUMENTATION",
-                    style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 11,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildRenewalTile(
-                    Icons.security,
-                    "Insurance Renewal",
-                    "Due: 15 Nov 2026",
-                    "CyberShield Comprehensive Policy",
-                    AppTheme.warning,
-                  ),
-                  const Divider(color: AppTheme.border, height: 24),
-                  _buildRenewalTile(
-                    Icons.badge_outlined,
-                    "Registration & License",
-                    "Valid through Mar 2030",
-                    "KA-04-EB-2026",
-                    AppTheme.accent,
-                  ),
-                  const Divider(color: AppTheme.border, height: 24),
-                  _buildRenewalTile(
-                    Icons.build_outlined,
-                    "Service Schedule",
-                    "Due in 3,000 km (or 10 Oct 2026)",
-                    "Recommended: Brake pads & Chain check",
-                    AppTheme.success,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static Widget _buildRenewalTile(
-    IconData icon,
-    String title,
-    String mainVal,
-    String subVal,
-    Color color,
-  ) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 13.5)),
-              const SizedBox(height: 2),
-              Text(mainVal, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13)),
-              const SizedBox(height: 2),
-              Text(subVal, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-            ],
-          ),
-        ),
-      ],
-    );
+    return BikeRenewalScreen(onBack: onBack);
   }
 }
 

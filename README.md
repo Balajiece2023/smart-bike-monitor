@@ -52,12 +52,16 @@
   - Simulates instantaneous emergency calls and ambulance dispatch broadcast.
   - Custom audible emergency siren sound (`alert.wav`) and prominent HUD emergency modal.
 
-### 2. 📡 Real Hardware BLE & In-App Simulator
+### 2. 📡 Real Hardware Dual-Mode Bluetooth (HC-05 v2.0 SPP & BLE) & Simulator
+- **HC-05 Bluetooth v2.0 & BLE Dual Compatibility**:
+  - Full hardware compatibility for **HC-05 / HC-06 Bluetooth v2.0 serial modules** via native Android RFCOMM SPP socket (`00001101-0000-1000-8000-00805F9B34FB`).
+  - Seamless automatic switching between **Bluetooth Classic Serial Port Profile (SPP)** and **BLE 4.0/5.0 GATT** based on connected hardware.
+  - Receives standard hardware ASCII trigger signals (`'1'` for Accident detection, `'X'` for Underage lock, `'a'/'b'/'c'/'d'` for rider slots) as well as binary framed packets.
 - **Android Native Bluetooth MethodChannel**:
-  - Automatically verifies Android BLE runtime permissions (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`).
-  - Prompts to turn on Bluetooth if disabled on the smartphone before initiating scans.
-  - Discovers physical Bluetooth Low Energy devices and displays paired devices cleanly.
-- **Full Bidirectional BLE Protocol Framing**:
+  - Automatically verifies Android Bluetooth permissions (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`, `BLUETOOTH_ADMIN`).
+  - Prompts to turn on phone Bluetooth if disabled before initiating scan.
+  - Discovers both bonded Bluetooth Classic (HC-05) devices and live BLE broadcast beacons.
+- **Full Bidirectional Protocol Framing**:
   - 8-byte framed packets: `[SOF1(0xAA), SOF2(0x55), Seq, CmdID, Len(2), Payload(N), CRC16(2)]`.
   - CRC-16-CCITT packet verification and automatic chunk assembly.
 - **Dedicated Simulator & Serial Log View**:

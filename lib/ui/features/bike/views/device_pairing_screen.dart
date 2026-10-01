@@ -32,11 +32,30 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
   // Virtual / Simulator Devices
   final List<Map<String, dynamic>> _simulatorDevices = [
     {
+      "name": "HC-05 Smart Bike (v2.0)",
+      "serial": "HC05-98:D3:31:F8:01:A2",
+      "signal": "Strong Signal (-48 dBm)",
+      "rssi": -48,
+      "isPrimary": true,
+      "isClassic": true,
+      "badge": "HC-05 BLUETOOTH v2.0",
+    },
+    {
+      "name": "ESP32-SMART-BIKE",
+      "serial": "ESP32-44:17:93:1A:88:FF",
+      "signal": "Strong Signal (-45 dBm)",
+      "rssi": -45,
+      "isPrimary": true,
+      "isClassic": false,
+      "badge": "ESP32 BLE SIMULATOR",
+    },
+    {
       "name": "Apex One Bike",
       "serial": "APX-8821",
       "signal": "Strong Signal (-52 dBm)",
       "rssi": -52,
-      "isPrimary": true,
+      "isPrimary": false,
+      "isClassic": false,
       "badge": "VIRTUAL HARDWARE",
     },
     {
@@ -45,6 +64,7 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
       "signal": "Good Signal (-68 dBm)",
       "rssi": -68,
       "isPrimary": false,
+      "isClassic": false,
       "badge": "SIMULATOR HUB",
     },
     {
@@ -53,6 +73,7 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
       "signal": "Moderate Signal (-84 dBm)",
       "rssi": -84,
       "isPrimary": false,
+      "isClassic": false,
       "badge": "GENERIC SIM",
     },
   ];
@@ -219,16 +240,28 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
           if (d is Map) {
             final name = d['name']?.toString() ?? 'Bluetooth Device';
             final address = d['address']?.toString() ?? '00:00:00:00';
-            final isSmartBike = name.toLowerCase().contains('bike') || name.toLowerCase().contains('esp32');
+            final isHc05 = name.toUpperCase().contains('HC-05') || name.toUpperCase().contains('HC-06') || name.toUpperCase().contains('HC05') || name.toUpperCase().contains('BT V2.0');
+            final isClassic = (d['isClassic'] as bool? ?? false) || isHc05;
+            final isSmartBike = name.toLowerCase().contains('bike') || name.toLowerCase().contains('esp32') || isHc05;
+
+            String badgeText;
+            if (isHc05) {
+              badgeText = "HC-05 BT v2.0";
+            } else if (isSmartBike) {
+              badgeText = isClassic ? "PAIRED CLASSIC BT" : "PAIRED SMART BIKE";
+            } else {
+              badgeText = "PAIRED DEVICE";
+            }
 
             realDevices.add({
               "name": name,
               "serial": address,
-              "signal": "Already Paired in Phone",
-              "rssi": -55,
-              "isPrimary": isSmartBike,
-              "badge": isSmartBike ? "PAIRED SMART BIKE" : "PAIRED DEVICE",
+              "signal": isHc05 ? "HC-05 SPP v2.0 Ready" : "Already Paired in Phone",
+              "rssi": -50,
+              "isPrimary": isSmartBike || isHc05,
+              "badge": badgeText,
               "isBonded": true,
+              "isClassic": isClassic,
             });
           }
         }
@@ -259,25 +292,7 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
     });
     _radarController.repeat();
 
-    // Query bonded devices and discover any nearby ESP32 smart bike hardware
-    Timer(const Duration(milliseconds: 1400), () {
-      if (!mounted) return;
-      final existingIndex = _realDiscoveredDevices.indexWhere((d) => d["name"] == "ESP32-SMART-BIKE");
-      if (existingIndex < 0) {
-        setState(() {
-          _realDiscoveredDevices.insert(0, {
-            "name": "ESP32-SMART-BIKE",
-            "serial": "ESP-32-BLE-9A01",
-            "signal": "Active Broadcast (-46 dBm)",
-            "rssi": -46,
-            "isPrimary": true,
-            "badge": "DISCOVERED BLE HARDWARE",
-            "isBonded": false,
-          });
-        });
-      }
-    });
-
+    // Scan timeout for Bluetooth discovery
     Timer(const Duration(milliseconds: 3000), () {
       if (!mounted) return;
       setState(() {
@@ -287,7 +302,7 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
     });
   }
 
-  void _pairDevice(String name, String id) async {
+  void _pairDevice(String name, String id, {bool isClassic = false}) async {
     // Bluetooth must be enabled to pair
     if (!_isBluetoothEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -305,7 +320,7 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
     });
 
     final controller = ref.read(bikeControllerProvider.notifier);
-    await controller.connect(id);
+    await controller.connect(id, isClassic: isClassic, deviceName: name);
 
     if (!mounted) return;
     Timer(const Duration(milliseconds: 900), () {
@@ -400,7 +415,18 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Bluetooth Status & Permission Prompt Banners
-          if (!_hasBluetoothPermission) ...[
+          if (_isCheckingStatus) ...[
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                ),
+              ),
+            ),
+          ] else if (!_hasBluetoothPermission) ...[
             Container(
               margin: const EdgeInsets.only(bottom: 14),
               padding: const EdgeInsets.all(14),
@@ -794,7 +820,11 @@ class _DevicePairingScreenState extends ConsumerState<DevicePairingScreen>
             ),
             onPressed: (!_isBluetoothEnabled || _pairingDeviceName != null)
                 ? null
-                : () => _pairDevice(item["name"], item["serial"]),
+                : () => _pairDevice(
+                      item["name"],
+                      item["serial"],
+                      isClassic: item["isClassic"] as bool? ?? false,
+                    ),
             child: Text(
               isBonded ? "Connect" : "Pair",
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),

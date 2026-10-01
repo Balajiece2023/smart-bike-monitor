@@ -351,13 +351,110 @@ class RenewalDetails {
   });
 
   factory RenewalDetails.defaultDetails() => const RenewalDetails(
-        insuranceExpiry: "15 Nov 2026",
+        insuranceExpiry: "2026-11-15",
         insuranceProvider: "CyberShield Comprehensive",
         licensePlate: "KA-04-EB-2026",
-        licenseExpiry: "02 Mar 2030",
-        serviceDueDate: "10 Oct 2026",
+        licenseExpiry: "2030-03-02",
+        serviceDueDate: "2026-10-10",
         serviceDueKm: 25000,
       );
+
+  RenewalDetails copyWith({
+    String? insuranceExpiry,
+    String? insuranceProvider,
+    String? licensePlate,
+    String? licenseExpiry,
+    String? serviceDueDate,
+    int? serviceDueKm,
+  }) {
+    return RenewalDetails(
+      insuranceExpiry: insuranceExpiry ?? this.insuranceExpiry,
+      insuranceProvider: insuranceProvider ?? this.insuranceProvider,
+      licensePlate: licensePlate ?? this.licensePlate,
+      licenseExpiry: licenseExpiry ?? this.licenseExpiry,
+      serviceDueDate: serviceDueDate ?? this.serviceDueDate,
+      serviceDueKm: serviceDueKm ?? this.serviceDueKm,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'insuranceExpiry': insuranceExpiry,
+        'insuranceProvider': insuranceProvider,
+        'licensePlate': licensePlate,
+        'licenseExpiry': licenseExpiry,
+        'serviceDueDate': serviceDueDate,
+        'serviceDueKm': serviceDueKm,
+      };
+
+  factory RenewalDetails.fromJson(Map<String, dynamic> json) => RenewalDetails(
+        insuranceExpiry: json['insuranceExpiry'] as String? ?? "2026-11-15",
+        insuranceProvider: json['insuranceProvider'] as String? ?? "CyberShield Comprehensive",
+        licensePlate: json['licensePlate'] as String? ?? "KA-04-EB-2026",
+        licenseExpiry: json['licenseExpiry'] as String? ?? "2030-03-02",
+        serviceDueDate: json['serviceDueDate'] as String? ?? "2026-10-10",
+        serviceDueKm: json['serviceDueKm'] as int? ?? 25000,
+      );
+
+  /// Check if insurance expiry date has passed
+  bool isInsuranceOverdue([DateTime? referenceDate]) {
+    final now = referenceDate ?? DateTime.now();
+    final parsed = _tryParseDate(insuranceExpiry);
+    if (parsed == null) return false;
+    return now.isAfter(parsed);
+  }
+
+  /// Check if license expiry date has passed
+  bool isLicenseOverdue([DateTime? referenceDate]) {
+    final now = referenceDate ?? DateTime.now();
+    final parsed = _tryParseDate(licenseExpiry);
+    if (parsed == null) return false;
+    return now.isAfter(parsed);
+  }
+
+  /// Check if service due date has passed or current KM exceeded
+  bool isServiceOverdue(double currentOdoKm, [DateTime? referenceDate]) {
+    if (currentOdoKm >= serviceDueKm && serviceDueKm > 0) return true;
+    final now = referenceDate ?? DateTime.now();
+    final parsed = _tryParseDate(serviceDueDate);
+    if (parsed == null) return false;
+    return now.isAfter(parsed);
+  }
+
+  /// Any renewal overdue check
+  bool isAnyOverdue(double currentOdoKm) {
+    return isInsuranceOverdue() || isLicenseOverdue() || isServiceOverdue(currentOdoKm);
+  }
+
+  static DateTime? _tryParseDate(String dateStr) {
+    if (dateStr.trim().isEmpty) return null;
+    try {
+      return DateTime.parse(dateStr.trim());
+    } catch (_) {
+      // Try parsing formats like "15 Nov 2026" or "15-11-2026"
+      try {
+        final parts = dateStr.trim().split(RegExp(r'[\s\-\/]+'));
+        if (parts.length == 3) {
+          // Check if year is 3rd part
+          int? y = int.tryParse(parts[2]);
+          int? d = int.tryParse(parts[0]);
+          if (y != null && d != null) {
+            int m = _monthNameToNum(parts[1]) ?? int.tryParse(parts[1]) ?? 1;
+            return DateTime(y, m, d);
+          }
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  static int? _monthNameToNum(String m) {
+    final lower = m.toLowerCase();
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    for (int i = 0; i < months.length; i++) {
+      if (lower.startsWith(months[i])) return i + 1;
+    }
+    return null;
+  }
 }
 
 class GeoFenceConfig {

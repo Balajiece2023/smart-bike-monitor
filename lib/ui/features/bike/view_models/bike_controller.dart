@@ -6,12 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../data/services/ble_service.dart';
+import '../../../../data/services/reactive_ble_service.dart';
+import '../../../../data/services/classic_bluetooth_service.dart';
 import '../../../../data/repositories/bike_repository_impl.dart';
 import '../../../../domain/models/bike_models.dart';
 
 // ----------------- DEPENDENCY INJECTION PROVIDERS -----------------
 
-/// Set this to switch between MockBleService (for simulator/testing) and ReactiveBleService (hardware)
 final bleServiceProvider = Provider<BleService>((ref) {
   final service = MockBleService();
   ref.onDispose(() => service.disconnect());
@@ -36,12 +37,15 @@ class BikeState {
   final double distanceToFenceCenterKm;
   final List<RegisteredUser> users;
   final String activeUserSlot; // 'a', 'b', 'c', 'd'
+  final RegisteredUser? activeUser;
   final bool underageAlertActive;
   final String? underageAlertMessage;
   final bool accidentAlertActive;
   final List<SimCommLog> simCommLogs;
+  final RenewalDetails renewal;
+  final bool isRenewalOverdue;
 
-  const BikeState({
+  BikeState({
     required this.connectionState,
     required this.telemetry,
     required this.gps,
@@ -56,11 +60,13 @@ class BikeState {
     this.underageAlertMessage,
     this.accidentAlertActive = false,
     this.simCommLogs = const [],
-  });
+    required this.renewal,
+    this.isRenewalOverdue = false,
+  }) : activeUser = _resolveActiveUser(users, activeUserSlot);
 
-  RegisteredUser? get activeUser {
+  static RegisteredUser? _resolveActiveUser(List<RegisteredUser> users, String slot) {
     try {
-      return users.firstWhere((u) => u.slotKey == activeUserSlot);
+      return users.firstWhere((u) => u.slotKey == slot);
     } catch (_) {
       return users.isNotEmpty ? users.first : null;
     }
@@ -90,6 +96,8 @@ class BikeState {
     String? underageAlertMessage,
     bool? accidentAlertActive,
     List<SimCommLog>? simCommLogs,
+    RenewalDetails? renewal,
+    bool? isRenewalOverdue,
   }) {
     return BikeState(
       connectionState: connectionState ?? this.connectionState,
@@ -106,6 +114,8 @@ class BikeState {
       underageAlertMessage: underageAlertMessage ?? this.underageAlertMessage,
       accidentAlertActive: accidentAlertActive ?? this.accidentAlertActive,
       simCommLogs: simCommLogs ?? this.simCommLogs,
+      renewal: renewal ?? this.renewal,
+      isRenewalOverdue: isRenewalOverdue ?? this.isRenewalOverdue,
     );
   }
 
@@ -122,6 +132,8 @@ class BikeState {
         underageAlertMessage: null,
         accidentAlertActive: false,
         simCommLogs: const [],
+        renewal: RenewalDetails.defaultDetails(),
+        isRenewalOverdue: false,
       );
 }
 
@@ -157,7 +169,11 @@ class BikeController extends StateNotifier<BikeState> {
     });
 
     _telemetrySub = _repository.telemetryStream.listen((telemetry) {
-      state = state.copyWith(telemetry: telemetry);
+      final isOverdue = _evaluateRenewalOverdue(state.renewal, telemetry.tripDistanceMeters);
+      state = state.copyWith(
+        telemetry: telemetry,
+        isRenewalOverdue: isOverdue,
+      );
     });
 
     _gpsSub = _repository.gpsStream.listen((gps) {
@@ -233,10 +249,23 @@ class BikeController extends StateNotifier<BikeState> {
       // Load active user slot
       final savedSlot = _prefs?.getString('smart_bike_active_slot_v1') ?? state.activeUserSlot;
 
+      // Load saved RenewalDetails
+      final renewalStr = _prefs?.getString('smart_bike_renewal_v1');
+      RenewalDetails loadedRenewal = state.renewal;
+      if (renewalStr != null && renewalStr.isNotEmpty) {
+        try {
+          loadedRenewal = RenewalDetails.fromJson(jsonDecode(renewalStr));
+        } catch (_) {}
+      }
+
+      final isOverdue = _evaluateRenewalOverdue(loadedRenewal, state.telemetry.tripDistanceMeters);
+
       state = state.copyWith(
         geoFence: loadedFence,
         users: loadedUsers,
         activeUserSlot: savedSlot,
+        renewal: loadedRenewal,
+        isRenewalOverdue: isOverdue,
       );
       _evaluateGeoFence(state.gps, loadedFence);
     } catch (_) {}
@@ -249,7 +278,25 @@ class BikeController extends StateNotifier<BikeState> {
       final usersJson = jsonEncode(state.users.map((u) => u.toJson()).toList());
       await _prefs?.setString('smart_bike_users_v1', usersJson);
       await _prefs?.setString('smart_bike_active_slot_v1', state.activeUserSlot);
+      await _prefs?.setString('smart_bike_renewal_v1', jsonEncode(state.renewal.toJson()));
     } catch (_) {}
+  }
+
+  bool _evaluateRenewalOverdue(RenewalDetails renewal, num tripDistanceMeters) {
+    final currentKm = tripDistanceMeters.toDouble() / 1000.0;
+    return renewal.isAnyOverdue(currentKm);
+  }
+
+  void updateRenewalDetails(RenewalDetails newDetails) {
+    final isOverdue = _evaluateRenewalOverdue(newDetails, state.telemetry.tripDistanceMeters);
+    state = state.copyWith(
+      renewal: newDetails,
+      isRenewalOverdue: isOverdue,
+    );
+    _persistSettings();
+    if (isOverdue) {
+      playAlertSound();
+    }
   }
 
   /// Factory Reset: Restores app and bike settings to default factory values
@@ -351,9 +398,25 @@ class BikeController extends StateNotifier<BikeState> {
     _evaluateGeoFence(newGps, state.geoFence);
   }
 
-  Future<void> connect(String deviceId) async {
+  Future<void> connect(String deviceId, {bool isClassic = false, String? deviceName}) async {
     state = state.copyWith(isOperationInProgress: true);
     try {
+      final nameLower = (deviceName ?? "").toLowerCase();
+      final idLower = deviceId.toLowerCase();
+      final isMacAddress = RegExp(r'^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$').hasMatch(deviceId);
+      final isHc05 = nameLower.contains('hc-05') || nameLower.contains('hc-06') || nameLower.contains('hc05') || nameLower.contains('bt v2.0') || idLower.contains('hc05') || idLower.contains('hc-05') || isClassic;
+
+      if (deviceId == "VIRTUAL_SIMULATOR" || deviceId.startsWith("APX") || deviceId.startsWith("LK") || deviceId.startsWith("BT-001A")) {
+        // Virtual test rig / simulator
+        _repository.setService(MockBleService());
+      } else if (isHc05 || isMacAddress) {
+        // Bluetooth Classic v2.0 SPP (e.g. HC-05 / HC-06 module)
+        _repository.setService(ClassicBluetoothService());
+      } else {
+        // Standard BLE GATT peripheral (e.g. ESP32-BLE)
+        _repository.setService(ReactiveBleService());
+      }
+
       await _repository.connect(deviceId);
     } finally {
       state = state.copyWith(isOperationInProgress: false);

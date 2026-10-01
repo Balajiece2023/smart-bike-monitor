@@ -11,6 +11,7 @@ import 'device_pairing_screen.dart';
 import 'geofencing_screen.dart';
 import 'user_management_screen.dart';
 import 'settings_screen.dart';
+import 'bike_renewal_screen.dart';
 
 class BikeDashboardScreen extends ConsumerStatefulWidget {
   const BikeDashboardScreen({super.key});
@@ -171,6 +172,12 @@ class _BikeDashboardScreenState extends ConsumerState<BikeDashboardScreen> {
             // Underage Unauthorised Alert Notification Banner with Sound
             if (bikeState.underageAlertActive) ...[
               _buildUnderageAlertBanner(context, controller, bikeState.underageAlertMessage),
+              const SizedBox(height: 14),
+            ],
+
+            // Overdue Bike Renewal Alert Notification Banner
+            if (bikeState.isRenewalOverdue) ...[
+              _buildRenewalOverdueBanner(context, bikeState),
               const SizedBox(height: 14),
             ],
 
@@ -667,6 +674,104 @@ class _BikeDashboardScreenState extends ConsumerState<BikeDashboardScreen> {
             tooltip: "Dismiss Alert",
             icon: const Icon(Icons.close, color: AppTheme.danger, size: 18),
             onPressed: () => controller.dismissUnderageAlert(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRenewalOverdueBanner(BuildContext context, BikeState state) {
+    final renewal = state.renewal;
+    final currentKm = state.telemetry.tripDistanceMeters / 1000.0;
+    final isIns = renewal.isInsuranceOverdue();
+    final isLic = renewal.isLicenseOverdue();
+    final isSvc = renewal.isServiceOverdue(currentKm);
+
+    final List<String> overdueReasons = [];
+    if (isIns) overdueReasons.add("Insurance Due (${renewal.insuranceExpiry})");
+    if (isLic) overdueReasons.add("License Plate Expired");
+    if (isSvc) overdueReasons.add("Service Due (${renewal.serviceDueKm} km)");
+
+    final textMsg = overdueReasons.isNotEmpty ? overdueReasons.join(" • ") : "Scheduled bike renewal is overdue";
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.danger.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.danger, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: AppTheme.danger,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.notification_important, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Text(
+                          "BIKE RENEWAL OVERDUE",
+                          style: TextStyle(
+                            color: AppTheme.danger,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12.5,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Icon(Icons.warning, color: AppTheme.danger, size: 14),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      textMsg,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.danger,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              icon: const Icon(Icons.edit_calendar, size: 14),
+              label: const Text(
+                "Update Bike Details & Schedule",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const BikeRenewalScreen(),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),

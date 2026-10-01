@@ -11,6 +11,7 @@ abstract class BikeRepository {
   Stream<BleConnectionState> get connectionStateStream;
   Stream<String> get hardwareCommandStream;
 
+  void setService(BleService service);
   Future<void> connect(String deviceId);
   Future<void> disconnect();
   Future<bool> setLock(bool locked);
@@ -20,15 +21,41 @@ abstract class BikeRepository {
 }
 
 class BikeRepositoryImpl implements BikeRepository {
-  final BleService _bleService;
+  BleService _bleService;
   int _sequenceCounter = 0;
 
   final _telemetryController = StreamController<BikeTelemetry>.broadcast();
   final _gpsController = StreamController<GpsData>.broadcast();
   final _fingerprintController = StreamController<FingerprintEvent>.broadcast();
+  final _connectionStateController = StreamController<BleConnectionState>.broadcast();
+  final _hardwareCommandController = StreamController<String>.broadcast();
+
+  StreamSubscription? _packetSub;
+  StreamSubscription? _connSub;
+  StreamSubscription? _hwCmdSub;
 
   BikeRepositoryImpl({required BleService bleService}) : _bleService = bleService {
-    _bleService.packetStream.listen(_handleIncomingPacket);
+    _listenToService(_bleService);
+  }
+
+  void _listenToService(BleService service) {
+    _packetSub?.cancel();
+    _connSub?.cancel();
+    _hwCmdSub?.cancel();
+
+    _packetSub = service.packetStream.listen(_handleIncomingPacket);
+    _connSub = service.connectionStateStream.listen((state) {
+      _connectionStateController.add(state);
+    });
+    _hwCmdSub = service.hardwareCommandStream.listen((cmd) {
+      _hardwareCommandController.add(cmd);
+    });
+  }
+
+  @override
+  void setService(BleService service) {
+    _bleService = service;
+    _listenToService(_bleService);
   }
 
   @override
@@ -41,10 +68,10 @@ class BikeRepositoryImpl implements BikeRepository {
   Stream<FingerprintEvent> get fingerprintStream => _fingerprintController.stream;
 
   @override
-  Stream<BleConnectionState> get connectionStateStream => _bleService.connectionStateStream;
+  Stream<BleConnectionState> get connectionStateStream => _connectionStateController.stream;
 
   @override
-  Stream<String> get hardwareCommandStream => _bleService.hardwareCommandStream;
+  Stream<String> get hardwareCommandStream => _hardwareCommandController.stream;
 
   @override
   void simulateHardwareCommand(String cmd) => _bleService.simulateHardwareCommand(cmd);
